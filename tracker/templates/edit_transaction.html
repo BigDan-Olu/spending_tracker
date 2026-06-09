@@ -1,0 +1,13 @@
+<form method="POST">
+    {% csrf_token %}
+
+    <input type="text" name="item" value="{{ expense.item }}">
+
+    <input type="number" step="0.01" name="amount" value="{{ expense.amount }}">
+
+    <input type="date" name="date" value="{{ expense.date|date:'Y-m-d' }}">
+
+    <button type="submit">
+        Update Transaction
+    </button>
+</form>

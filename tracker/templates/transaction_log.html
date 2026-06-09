@@ -1,0 +1,157 @@
+```html
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Transaction Log</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+
+        .btn-delete {
+            background: #dc2626;
+        }
+
+        .btn-edit {
+            background: #16a34a;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #2563eb;
+            color: white;
+            text-align: left;
+            padding: 12px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .amount {
+            font-weight: bold;
+            color: #059669;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="header">
+            <h1>Transaction Log</h1>
+
+            <a href="{% url 'dashboard' %}" class="btn">
+                Back to Dashboard
+            </a>
+        </div>
+
+        <div class="card">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Item</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for transaction in transactions %}
+                    <tr>
+
+                        <td>
+                            {{ transaction.date }}
+                        </td>
+
+                        <td>
+                            {{ transaction.item|default:"Uncategorized" }}
+                        </td>
+
+                        <td class="amount">
+                            ₦{{ transaction.amount }}
+                        </td>
+
+                        <td>
+
+                            <a href="{% url 'edit_transaction' transaction.id %}" class="btn btn-edit">
+                                Edit
+                            </a>
+
+                            <a href="{% url 'delete_transaction' transaction.id %}" class="btn btn-delete">
+                                Delete
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="4">
+                            No transactions recorded.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
+```

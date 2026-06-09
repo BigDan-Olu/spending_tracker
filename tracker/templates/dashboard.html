@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Spending Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-100 min-h-screen p-6">
+
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex justify-between items-center">
+
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-600">
+                    💰 Spending Tracker Dashboard
+                </h1>
+
+                <p class="text-sm text-slate-500">
+                    Welcome, {{ request.user.first_name|default:request.user.username }}
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+
+                <a href="{% url 'transaction_log' %}"
+                    class="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-800">
+                    Transactions
+                </a>
+
+                <a href="{% url 'categories' %}"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    Categories
+                </a>
+
+                <form action="{% url 'logout' %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+                        Logout
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-slate-500 text-sm">
+                    Total Spending
+                </h3>
+
+                <p class="text-3xl font-bold text-red-600 mt-2">
+                    ₦{{ total_spending|floatformat:2 }}
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-slate-500 text-sm">
+                    Today's Spending
+                </h3>
+
+                <p class="text-3xl font-bold text-orange-500 mt-2">
+                    ₦{{ today_spending|floatformat:2 }}
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-slate-500 text-sm">
+                    This Month
+                </h3>
+
+                <p class="text-3xl font-bold text-green-600 mt-2">
+                    ₦{{ monthly_spending|floatformat:2 }}
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+
+            <h2 class="text-xl font-bold mb-4">
+                Recent Transactions
+            </h2>
+
+            <ul class="divide-y">
+
+                {% for expense in recent_expenses %}
+                <li class="py-3 flex justify-between items-center">
+
+                    <div>
+                        <p class="font-semibold">
+                            {{ expense.item|default:"Uncategorized" }}
+                        </p>
+
+                        <p class="text-sm text-slate-500">
+                            {{ expense.category }}
+                        </p>
+
+                        <p class="text-xs text-slate-400">
+                            {{ expense.date }}
+                        </p>
+                    </div>
+
+                    <span class="font-bold text-red-600">
+                        ₦{{ expense.amount|floatformat:2 }}
+                    </span>
+
+                </li>
+                {% empty %}
+                <li class="py-4 text-slate-400">
+                    No transactions yet.
+                </li>
+                {% endfor %}
+
+            </ul>
+
+        </div>
+
+        <!-- Add Expense -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+
+            <h2 class="text-xl font-bold mb-4">
+                Add New Expense
+            </h2>
+
+            <form action="{% url 'add_spending' %}" method="POST" class="space-y-4">
+
+                {% csrf_token %}
+
+                <input type="number" step="0.01" name="amount" placeholder="Amount (₦)" required
+                    class="w-full border border-slate-300 p-3 rounded-lg">
+
+                <input type="text" name="item" placeholder="Description"
+                    class="w-full border border-slate-300 p-3 rounded-lg">
+
+                <select name="category" class="w-full border border-slate-300 p-3 rounded-lg" required>
+
+                    <option value="">Select Category</option>
+                    <option value="Food">Food</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Bills">Bills</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Other">Other</option>
+
+                </select>
+
+                <input type="date" name="date" required class="w-full border border-slate-300 p-3 rounded-lg">
+
+                <button type="submit"
+                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700">
+                    Save Expense
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- Expense Ledger -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+
+            <h2 class="text-xl font-bold mb-4">
+                Expense Ledger
+            </h2>
+
+            <div class="overflow-x-auto">
+
+                <table class="w-full">
+
+                    <thead>
+                        <tr class="border-b">
+                            <th class="text-left py-3">Date</th>
+                            <th class="text-left py-3">Description</th>
+                            <th class="text-left py-3">Category</th>
+                            <th class="text-right py-3">Amount</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for log in all_spending %}
+                        <tr class="border-b">
+
+                            <td class="py-3">
+                                {{ log.date }}
+                            </td>
+
+                            <td class="py-3">
+                                {{ log.item|default:"Uncategorized" }}
+                            </td>
+
+                            <td class="py-3">
+                                {{ log.category }}
+                            </td>
+
+                            <td class="py-3 text-right font-semibold text-red-600">
+                                ₦{{ log.amount|floatformat:2 }}
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-6 text-center text-slate-400">
+                                No expenses recorded.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

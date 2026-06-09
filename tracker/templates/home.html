@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-lg">
+
+        <!-- App Header -->
+        <div class="bg-white rounded-xl shadow-sm p-8 border border-slate-200">
+
+            <h1 class="text-3xl font-bold text-center text-indigo-600 mb-2">
+                💰 Spending Tracker
+            </h1>
+
+            <p class="text-center text-slate-500 mb-6">
+                Track your expenses, monitor spending habits, and stay in control of your finances.
+            </p>
+
+            <!-- Messages -->
+            {% if messages %}
+            {% for message in messages %}
+            <div class="mb-4 p-3 rounded-lg text-sm
+                    {% if 'error' in message.tags %}
+                        bg-red-50 text-red-700 border border-red-200
+                    {% else %}
+                        bg-green-50 text-green-700 border border-green-200
+                    {% endif %}
+                ">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <!-- Registration Form -->
+            <form action="{% url 'register_user' %}" method="POST" class="space-y-3">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" name="first_name" placeholder="First Name" required
+                        class="border border-slate-300 p-3 rounded-lg">
+
+                    <input type="text" name="last_name" placeholder="Last Name" required
+                        class="border border-slate-300 p-3 rounded-lg">
+                </div>
+
+                <input type="email" name="email" placeholder="Email Address" required
+                    class="w-full border border-slate-300 p-3 rounded-lg">
+
+                <input type="text" name="phone" placeholder="Phone Number" required
+                    class="w-full border border-slate-300 p-3 rounded-lg">
+
+                <input type="password" name="password" placeholder="Create Password" required
+                    class="w-full border border-slate-300 p-3 rounded-lg">
+
+                <button type="submit"
+                    class="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700">
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Login Link -->
+            <div class="text-center mt-6">
+                <p class="text-sm text-slate-600">
+                    Already have an account?
+                </p>
+
+                <a href="{% url 'login' %}" class="text-indigo-600 font-semibold hover:underline">
+                    Welcome Back
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

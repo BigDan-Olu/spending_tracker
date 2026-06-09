@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Categories</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-100 p-6">
+
+    <div class="max-w-4xl mx-auto">
+
+        <div class="bg-white p-6 rounded-xl shadow">
+
+            <div class="flex justify-between mb-4">
+
+                <h1 class="text-2xl font-bold">
+                    Spending Categories
+                </h1>
+
+                <a href="{% url 'dashboard' %}" class="bg-indigo-600 text-white px-4 py-2 rounded">
+                    Dashboard
+                </a>
+
+            </div>
+
+            <table class="w-full">
+
+                <thead>
+                    <tr class="border-b">
+                        <th class="text-left py-3">Category</th>
+                        <th class="text-right py-3">Total Spent</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for category in categories %}
+                    <tr class="border-b">
+
+                        <td class="py-3">
+                            {{ category.category }}
+                        </td>
+
+                        <td class="py-3 text-right font-bold">
+                            ₦{{ category.total|floatformat:2 }}
+                        </td>
+
+                    </tr>
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="2" class="py-4 text-center">
+                            No spending recorded.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
