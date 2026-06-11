@@ -17,6 +17,11 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Profile for {self.user.username}"
+    
+    
+class Member(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
 
 
 class DailySpending(models.Model):
@@ -30,7 +35,7 @@ class DailySpending(models.Model):
     ]
     # Link spending to Django's built-in User now
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    amount = models.FloatField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
     item = models.CharField(max_length=100, blank=True, null=True)
 
     category = models.CharField(
