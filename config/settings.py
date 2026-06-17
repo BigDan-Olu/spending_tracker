@@ -31,9 +31,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["spending-tracker-sunlit-shape-9017.fly.dev",]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://spending-tracker-sunlit-shape-9017.fly.dev",
+]
 
 
 # Application definition
