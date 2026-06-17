@@ -1,29 +1,28 @@
-ARG PYTHON_VERSION=3.13-slim
+FROM python:3.13-slim
 
-FROM python:${PYTHON_VERSION}
-
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# install psycopg2 dependencies.
+# Install system dependencies for PostgreSQL and building packages
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /code
+# Install uv directly from the official binary distribution
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Set working directory
 WORKDIR /code
 
-RUN pip install poetry
-COPY pyproject.toml poetry.lock /code/
-RUN poetry config virtualenvs.create false
-RUN poetry install --only main --no-root --no-interaction
-COPY . /code
+# Copy dependency configuration files first to utilize Docker layer caching
+COPY pyproject.toml uv.lock /code/
 
-ENV SECRET_KEY "u5KhRIIRu8fkRVJ8yx6JD4lCpZJWkLpmK9G9fVaxZU3Pia3mQw"
-RUN python manage.py collectstatic --noinput
+# Install dependencies globally inside the container using uv
+RUN uv pip install --system -r pyproject.toml
 
+# Copy the rest of the application code
+COPY . /code/
+
+# Expose Django's internal port
 EXPOSE 8000
 
-CMD ["gunicorn","--bind",":8000","--workers","2","config.wsgi"]
+# Run the web server via uv using the Gunicorn command from your Procfile
+CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000"]
