@@ -10,9 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
-from pathlib import Path
 import os
+import dj_database_url
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,11 +32,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ["spending-tracker-sunlit-shape-9017.fly.dev",]
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "spending-tracker-sunlit-shape-9017.fly.dev",
+]
 
 CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
     "https://spending-tracker-sunlit-shape-9017.fly.dev",
 ]
 
@@ -86,13 +93,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
+DATABASES = {"default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

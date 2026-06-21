@@ -5,7 +5,7 @@ from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .models import DailySpending, Profile
+from .models import DailySpending, Profile, Category
 
 
 def user_login(request):
@@ -165,12 +165,18 @@ def forgot_password(request):
 
     return render(request, "forgot_password.html")
 
+from .models import DailySpending, Category
+
+
 def add_spending(request):
     if request.method == "POST" and request.user.is_authenticated:
         amount = request.POST.get("amount")
         item = request.POST.get("item")
-        category = request.POST.get("category")
         date = request.POST.get("date")
+
+        category_name = request.POST.get("category")
+
+        category, created = Category.objects.get_or_create(name=category_name)
 
         spending = DailySpending.objects.create(
             user=request.user,
@@ -184,7 +190,7 @@ def add_spending(request):
         print("Saved spending ID:", spending.id)
 
         messages.success(request, "Expense logged successfully!")
-        
+
         return redirect("dashboard")
 
 
