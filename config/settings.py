@@ -16,16 +16,23 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 
-load_dotenv()
-
 
 SECRET_KEY = "ow7_2&shxm3(l^p&&-#5-l!d$irdep3#@w=x6q2#7tuk)2losj"
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / ".env")
 
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "ow7_2&shxm3(l^p&&-#5-l!d$irdep3#@w=x6q2#7tuk)2losj"
+)
+
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+SITE_URL = os.getenv("SITE_URL")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
