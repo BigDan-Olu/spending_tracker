@@ -23,11 +23,6 @@ urlpatterns = [
         name="categories",
     ),
     path(
-        "password-reset/",
-        auth_views.PasswordResetView.as_view(template_name="password_reset.html"),
-        name="password_reset",
-    ),
-    path(
         "password-reset/done/",
         auth_views.PasswordResetDoneView.as_view(
             template_name="password_reset_done.html"

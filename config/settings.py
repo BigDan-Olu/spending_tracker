@@ -16,20 +16,13 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 
-
-SECRET_KEY = "ow7_2&shxm3(l^p&&-#5-l!d$irdep3#@w=x6q2#7tuk)2losj"
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "ow7_2&shxm3(l^p&&-#5-l!d$irdep3#@w=x6q2#7tuk)2losj"
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 SITE_URL = os.getenv("SITE_URL")
@@ -63,16 +56,10 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 EMAIL_USE_TLS = True
 
-DEFAULT_FROM_EMAIL = os.getenv(
-    "DEFAULT_FROM_EMAIL",
-    EMAIL_HOST_USER
-)
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 
-SITE_URL = os.getenv(
-    "SITE_URL",
-    "https://bigdanolu.pythonanywhere.com"
-)
+SITE_URL = os.getenv("SITE_URL", "https://bigdanolu.pythonanywhere.com")
 
 # Application definition
 

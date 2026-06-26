@@ -1,19 +1,23 @@
 import random
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.urls import reverse
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.db.models import Sum
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
+
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.db.models import Sum
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.views.decorators.http import require_POST
+
 from tracker.utils import send_brevo_email
 
-from .models import Category, DailySpending, EmailOTP, Profile
-from django.contrib.auth import get_user_model
+from .models import Category, DailySpending, EmailOTP, PendingRegistration, Profile
 
 User = get_user_model()
 
@@ -41,6 +45,59 @@ def user_login(request):
         return redirect("dashboard")
 
     return render(request, "login.html")
+
+
+@require_POST
+def resend_otp(request):
+    email = request.POST.get("email")
+
+    if not email:
+        return JsonResponse(
+            {"success": False, "message": "Email is required."},
+            status=400,
+        )
+
+    try:
+        pending = PendingRegistration.objects.get(email=email)
+    except PendingRegistration.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "message": "No pending registration found."},
+            status=404,
+        )
+
+    # Generate a new OTP
+    otp = f"{random.randint(100000, 999999)}"
+
+    pending.otp = otp
+    pending.created_at = timezone.now()
+    pending.save(update_fields=["otp", "created_at"])
+
+    response = send_brevo_email(
+        pending.email,
+        "Verify Your Spending Tracker Account",
+        f"""
+        <h2>Email Verification</h2>
+
+        <p>Your new verification code is:</p>
+
+        <h1>{otp}</h1>
+
+        <p>This code expires in <strong>10 minutes</strong>.</p>
+        """,
+    )
+
+    if response.status_code not in (200, 201):
+        return JsonResponse(
+            {"success": False, "message": "Unable to send OTP email."},
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "A new verification code has been sent to your email.",
+        }
+    )
 
 
 def user_logout(request):
@@ -85,50 +142,49 @@ def home(request):
 
 def verify_otp(request):
     if request.method == "POST":
+        email = request.POST.get("email")
         otp = request.POST.get("otp")
 
-        print("ENTERED OTP:", otp)
+        pending = PendingRegistration.objects.filter(
+            email=email,
+            otp=otp,
+        ).first()
 
-        data = request.session.get("registration_data")
+        if not pending:
+            messages.error(request, "Invalid email or OTP.")
+            return redirect("verify_otp")
 
-        print("SESSION:", data)
-
-        if not data:
-            messages.error(request, "Registration session expired.")
+        if pending.is_expired():
+            pending.delete()
+            messages.error(request, "OTP has expired.")
             return redirect("home")
 
-        records = EmailOTP.objects.filter(email=data["email"])
+        user = User(
+            username=pending.email,
+            email=pending.email,
+            first_name=pending.first_name,
+            last_name=pending.last_name,
+        )
 
-        print("OTP RECORDS:", list(records.values()))
+        # Password is already hashed in PendingRegistration
+        user.password = pending.password
+        user.save()
 
-        record = records.filter(otp=otp).last()
+        Profile.objects.create(
+            user=user,
+            phone=pending.phone,
+        )
 
-        print("MATCHED RECORD:", record)
+        login(request, user)
 
-        if record:
-            user = User.objects.create_user(
-                username=data["email"],
-                email=data["email"],
-                password=data["password"],
-                first_name=data["first_name"],
-                last_name=data["last_name"],
-            )
+        pending.delete()
 
-            Profile.objects.create(user=user, phone=data["phone"])
-
-            login(request, user)
-
-            EmailOTP.objects.filter(email=data["email"]).delete()
-
-            request.session.pop("registration_data", None)
-
-            messages.success(request, "Account verified successfully!")
-
-            return redirect("dashboard")
-
-        messages.error(request, "Invalid OTP.")
+        messages.success(request, "Account verified successfully!")
+        request.session.pop("pending_email", None)
+        return redirect("dashboard")
 
     return render(request, "verify_otp.html")
+
 
 def dashboard(request):
     if not request.user.is_authenticated:
@@ -167,6 +223,7 @@ def dashboard(request):
 
     return render(request, "dashboard.html", context)
 
+
 def register_user(request):
     if request.method == "POST":
         email = request.POST.get("email")
@@ -175,57 +232,38 @@ def register_user(request):
         last_name = request.POST.get("last_name")
         password = request.POST.get("password")
 
-        print("EMAIL:", email)
-        print("PHONE:", phone)
-
-        print("EMAIL EXISTS:", User.objects.filter(email=email).exists())
-        print("PHONE EXISTS:", Profile.objects.filter(phone=phone).exists())
-
         if not phone.isdigit():
-            print("FAILED PHONE VALIDATION")
-            messages.error(
-                request, "Registration failed: Phone number must contain only numbers."
-            )
+            messages.error(request, "Phone number must contain only numbers.")
             return redirect("home")
 
         if User.objects.filter(email=email).exists():
-            print("EMAIL ALREADY EXISTS")
-            messages.error(
-                request, "Registration failed: This email is already registered."
-            )
+            messages.error(request, "Email already registered.")
             return redirect("home")
 
         if Profile.objects.filter(phone=phone).exists():
-            print("PHONE ALREADY EXISTS")
-            messages.error(
-                request, "Registration failed: This phone number is already registered."
-            )
+            messages.error(request, "Phone number already registered.")
             return redirect("home")
 
-        otp = str(random.randint(100000, 999999))
-        print("OTP:", otp)
+        otp = generate_otp()
 
-        EmailOTP.objects.create(email=email, otp=otp)
-        print("OTP SAVED")
+        # Remove any previous pending registration
+        PendingRegistration.objects.filter(email=email).delete()
 
-        request.session["registration_data"] = {
-            "email": email,
-            "phone": phone,
-            "first_name": first_name,
-            "last_name": last_name,
-            "password": password,
-        }
-
-        print("SESSION SAVED")
-
-        response = send_brevo_email(
-            email,
-            "Verify Your Spending Tracker Account",
-            f"<h2>Your verification code is {otp}</h2>",
+        PendingRegistration.objects.create(
+            email=email,
+            phone=phone,
+            first_name=first_name,
+            last_name=last_name,
+            password=make_password(password),
+            otp=otp,
         )
 
-        print("EMAIL STATUS:", response.status_code)
-        print("EMAIL BODY:", response.text)
+        send_brevo_email(
+            email,
+            "Verify your account",
+            f"<h2>Your verification code is <b>{otp}</b></h2>",
+        )
+        request.session["pending_email"] = email
 
         messages.success(request, "Verification code sent to your email.")
 
@@ -242,7 +280,7 @@ def forgot_password(request):
         user = User.objects.filter(email=email).first()
 
         if not user:
-            messages.error(request, "No account found with that email.")
+            messages.error(request, "No account exists with that email.")
             return redirect("forgot_password")
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -260,17 +298,25 @@ def forgot_password(request):
             f"""
             <h2>Password Reset</h2>
 
-            <p>Click the link below to reset your password:</p>
+            <p>Click the button below.</p>
 
-            <a href="{reset_link}">
-                Reset Password
-            </a>
+            <p>
+                <a href="{reset_link}">
+                    Reset Password
+                </a>
+            </p>
+
+            <p>
+                If you didn't request this,
+                ignore this email.
+            </p>
             """,
         )
-        print("RESET LINK:", reset_link)
-        print("STATUS:", response.status_code)
-        print("BODY:", response.text)
-        messages.success(request, "Password reset link sent to your email.")
+
+        print(response.status_code)
+        print(response.text)
+
+        messages.success(request, "A password reset link has been sent.")
 
         return redirect("forgot_password")
 
@@ -280,34 +326,34 @@ def forgot_password(request):
 def reset_password(request, uidb64, token):
 
     try:
-        uid = force_bytes(urlsafe_base64_decode(uidb64))
-
-    except:
-        uid = None
-
-    user = None
-
-    try:
         uid = urlsafe_base64_decode(uidb64).decode()
         user = User.objects.get(pk=uid)
 
-    except:
-        pass
+    except Exception:
+        user = None
 
-    if user and default_token_generator.check_token(user, token):
-        if request.method == "POST":
-            password = request.POST.get("password")
+    if not user:
+        return render(request, "reset_invalid.html")
 
-            user.set_password(password)
-            user.save()
+    if not default_token_generator.check_token(user, token):
+        return render(request, "reset_invalid.html")
 
-            messages.success(request, "Password reset successful. Login now.")
+    if request.method == "POST":
+        password = request.POST.get("password")
+        confirm = request.POST.get("confirm_password")
 
-            return redirect("login")
+        if password != confirm:
+            messages.error(request, "Passwords do not match.")
+            return render(request, "reset_password.html")
 
-        return render(request, "reset_password.html")
+        user.set_password(password)
+        user.save()
 
-    return render(request, "reset_invalid.html")
+        messages.success(request, "Password updated successfully.")
+
+        return redirect("login")
+
+    return render(request, "reset_password.html")
 
 
 def add_spending(request):
@@ -363,4 +409,5 @@ def categories(request):
 
     return render(request, "categories.html", {"categories": categories})
 
+    return render(request, "categories.html", {"categories": categories})
     return render(request, "categories.html", {"categories": categories})
