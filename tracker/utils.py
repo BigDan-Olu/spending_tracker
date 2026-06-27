@@ -4,7 +4,6 @@ import requests
 
 
 def send_brevo_email(to_email, subject, html_content):
-
     url = "https://api.brevo.com/v3/smtp/email"
 
     headers = {
@@ -23,9 +22,12 @@ def send_brevo_email(to_email, subject, html_content):
         "htmlContent": html_content,
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        print("BREVO STATUS:", response.status_code)
+        print("BREVO BODY:", response.text)
+        return response
 
-    print("BREVO STATUS:", response.status_code)
-    print("BREVO BODY:", response.text)
-
-    return response
+    except requests.exceptions.RequestException as e:
+        print("BREVO EMAIL FAILED:", str(e))
+        return None

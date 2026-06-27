@@ -142,7 +142,7 @@ def home(request):
 
 def verify_otp(request):
     if request.method == "POST":
-        email = request.POST.get("email")
+        email = request.session.get("pending_email")
         otp = request.POST.get("otp")
 
         pending = PendingRegistration.objects.filter(
@@ -151,7 +151,7 @@ def verify_otp(request):
         ).first()
 
         if not pending:
-            messages.error(request, "Invalid email or OTP.")
+            messages.error(request, "Invalid OTP.")
             return redirect("verify_otp")
 
         if pending.is_expired():
@@ -166,7 +166,6 @@ def verify_otp(request):
             last_name=pending.last_name,
         )
 
-        # Password is already hashed in PendingRegistration
         user.password = pending.password
         user.save()
 
@@ -178,9 +177,9 @@ def verify_otp(request):
         login(request, user)
 
         pending.delete()
+        request.session.pop("pending_email", None)
 
         messages.success(request, "Account verified successfully!")
-        request.session.pop("pending_email", None)
         return redirect("dashboard")
 
     return render(request, "verify_otp.html")
@@ -225,31 +224,41 @@ def dashboard(request):
 
 
 def register_user(request):
+    print("1. register_user called")
+
     if request.method == "POST":
+        print("2. POST request")
+
         email = request.POST.get("email")
         phone = request.POST.get("phone")
         first_name = request.POST.get("first_name")
         last_name = request.POST.get("last_name")
         password = request.POST.get("password")
 
+        print("3. Data received:", email)
+
         if not phone.isdigit():
+            print("Phone validation failed")
             messages.error(request, "Phone number must contain only numbers.")
             return redirect("home")
 
         if User.objects.filter(email=email).exists():
+            print("Email already exists")
             messages.error(request, "Email already registered.")
             return redirect("home")
 
         if Profile.objects.filter(phone=phone).exists():
+            print("Phone already exists")
             messages.error(request, "Phone number already registered.")
             return redirect("home")
 
         otp = generate_otp()
+        print("4. OTP generated:", otp)
 
-        # Remove any previous pending registration
         PendingRegistration.objects.filter(email=email).delete()
+        print("5. Old pending deleted")
 
-        PendingRegistration.objects.create(
+        pending = PendingRegistration.objects.create(
             email=email,
             phone=phone,
             first_name=first_name,
@@ -257,14 +266,17 @@ def register_user(request):
             password=make_password(password),
             otp=otp,
         )
+        print("6. Pending created:", pending.email)
 
+        print("7. Sending email...")
         send_brevo_email(
             email,
             "Verify your account",
             f"<h2>Your verification code is <b>{otp}</b></h2>",
         )
-        request.session["pending_email"] = email
+        print("8. Email sent")
 
+        request.session["pending_email"] = email
         messages.success(request, "Verification code sent to your email.")
 
         return redirect("verify_otp")
